@@ -2,16 +2,17 @@ local QBCore = exports['qb-core']:GetCoreObject()
 
 local VehicleCoords = nil
 local CurrentCops = 0
+local onRun = false
+local hasPackage = false
+local hasKey = false
 
-RegisterNetEvent('QBCore:Client:OnPlayerLoaded')
-AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
     QBCore.Functions.GetPlayerData(function(PlayerData)
         PlayerJob = PlayerData.job
     end)
 end)
 
-RegisterNetEvent('QBCore:Client:OnJobUpdate')
-AddEventHandler('QBCore:Client:OnJobUpdate', function(JobInfo)
+RegisterNetEvent('QBCore:Client:OnJobUpdate', function(JobInfo)
     PlayerJob = JobInfo
 end)
 
@@ -50,7 +51,10 @@ CreateThread(function()
                 event = "ps-methrun:client:reward",
                 icon = "fas fa-circle",
                 label = "Check Product",
-                item = 'meth_cured',
+
+                canInteract = function()
+                    if onRun and hasPackage then return true else return false end 
+                end
             },
         },
         distance = 3.0 
@@ -63,7 +67,10 @@ CreateThread(function()
                 event = "ps-methrun:client:items",
                 icon = "fas fa-circle",
                 label = "Grab Goods",
-                item = 'casekey',            
+
+                canInteract = function()
+                    if onRun and hasKey then return true else return false end 
+                end
             },
         },
         distance = 2.5
@@ -88,10 +95,25 @@ function Itemtimemsg()
 	subject = Lang:t('mail.subject'),
 	message = Lang:t('mail.message'),
 	})
+    casegps()
+    QBCore.Functions.Notify(Lang:t("success.case_beep"), 'success')
     Citizen.Wait(Config.Itemtime)
+    RemoveBlip(playerCase)
     TriggerServerEvent('ps-methrun:server:givecaseitems')
     QBCore.Functions.Notify(Lang:t("success.case_has_been_unlocked"), 'success')
 end
+
+function casegps()
+    if QBCore.Functions.GetPlayerData().job.name == 'police' then
+        playerCase = AddBlipForEntity(PlayerPedId())
+        SetBlipSprite(playerCase, 161)
+        SetBlipScale(playerCase, 1.4)
+        PulseBlip(playerCase)
+        SetBlipColour(playerCase, 2)
+        SetBlipAsShortRange(playerCase, true)
+    end
+end
+
 ---
 RegisterNetEvent('ps-methrun:client:start', function ()
     if CurrentCops >= Config.MinimumMethJobPolice then
@@ -107,8 +129,8 @@ RegisterNetEvent('ps-methrun:client:start', function ()
                 }, {}, {}, function() -- Done
                     TriggerEvent('animations:client:EmoteCommandStart', {"c"})
                     TriggerServerEvent('ps-methrun:server:startr')
-                    TriggerServerEvent('ps-methrun:server:coolout')
-
+                    onRun = true
+                    hasKey = true
                 end, function() -- Cancel
                     TriggerEvent('animations:client:EmoteCommandStart', {"c"})
                     QBCore.Functions.Notify(Lang:t("error.canceled"), 'error')
@@ -134,7 +156,7 @@ RequestModel(`slamvan2`)
 Citizen.Wait(0)
 end
 
-SetNewWaypoint(VehicleCoords.x, VehicleCoords.y)
+
 ClearAreaOfVehicles(VehicleCoords.x, VehicleCoords.y, VehicleCoords.z, 15.0, false, false, false, false, false)
 transport = CreateVehicle(`slamvan2`, VehicleCoords.x, VehicleCoords.y, VehicleCoords.z, 52.0, true, true)
 SpawnGuards()
@@ -143,12 +165,13 @@ end)
 
 function spawncase()
     local case = CreateObject(`prop_security_case_01`, 3828.87, 4471.85, 3.0, true,  true, true)
-    CreateObject(case)
+    SetNewWaypoint(3828.87, 4471.85)
     SetEntityHeading(case, 176.02)
+    CreateObject(case)
     FreezeEntityPosition(case, true)
     SetEntityAsMissionEntity(case)
     case = AddBlipForEntity(case)
-    SetBlipSprite(case, 586)
+    SetBlipSprite(case, 457)
     SetBlipColour(case, 2)
     SetBlipFlashes(case, false)
     BeginTextCommandSetBlipName("STRING")
@@ -232,6 +255,7 @@ RegisterNetEvent('ps-methrun:client:items', function()
                     DeleteEntity(case)
                     QBCore.Functions.Notify(Lang:t("success.you_removed_first_security_case"), 'success')
                     Itemtimemsg()
+                    hasPackage = true
                 end
                 end, function()
                     TriggerEvent('animations:client:EmoteCommandStart', {"c"})
@@ -264,6 +288,7 @@ RegisterNetEvent('ps-methrun:client:reward', function()
                 TriggerServerEvent('ps-methrun:server:rewardpayout')
 
                 QBCore.Functions.Notify(Lang:t("success.you_got_paid"), 'success')
+                onRun = false
             end, function()
                 TriggerEvent('animations:client:EmoteCommandStart', {"c"})
                 QBCore.Functions.Notify(Lang:t("error.canceled"), 'error')
@@ -272,4 +297,8 @@ RegisterNetEvent('ps-methrun:client:reward', function()
             QBCore.Functions.Notify(Lang:t("error.you_cannot_do_this"), 'error')
         end
     end, "meth_cured",20)
+end)
+
+RegisterCommand('meth', function ()
+    TriggerEvent('ps-methrun:client:start')
 end)

@@ -2,7 +2,7 @@ Config = {}
 
 
 Config.MinimumMethJobPolice = 0
-Config.Cooldown = 360 --- Cooldown until next allowed meth run
+Config.Cooldown = 600 --- Cooldown until next allowed meth run
 Config.RunCost = 1500 --- Self explanatory 
 
 Config.Payout = math.random(150000, 220000) -- How much you get paid

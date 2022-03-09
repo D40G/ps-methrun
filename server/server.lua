@@ -12,6 +12,7 @@ RegisterServerEvent('ps-methrun:server:startr', function()
         TriggerClientEvent('inventory:client:ItemBox', src, QBCore.Shared.Items["casekey"], "add")
 		TriggerClientEvent("ps-methrun:server:runactivate", src)
         TriggerClientEvent('QBCore:Notify', src, Lang:t("success.send_email_right_now"), 'success')
+        TriggerEvent('ps-methrun:server:coolout')
 	else
 		TriggerClientEvent('QBCore:Notify', source, Lang:t("error.you_dont_have_enough_money"), 'error')
 	end
@@ -20,7 +21,7 @@ end)
 -- cool down for job
 RegisterServerEvent('ps-methrun:server:coolout', function()
     Cooldown = true
-    local timer = Config.Cooldown * 60000
+    local timer = Config.Cooldown * 1000
     while timer > 0 do
         Wait(1000)
         timer = timer - 1000
